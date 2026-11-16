@@ -14,6 +14,9 @@ import org.jspecify.annotations.Nullable;
  * <li>Coverage is active when the Member has a Coverage on the Service date. Finding it is the caller's single
  * query, so the rules get the active Coverage or none.</li>
  * <li>The plan year is the calendar year of the Service date.</li>
+ * <li>The deductible remaining and out-of-pocket remaining are the Plan's deductible and out-of-pocket maximum minus
+ * what the Accumulator for the plan year says has been met. With no Accumulator nothing has been met yet, so the
+ * full amounts remain.</li>
  * <li>With no active Coverage there is no Benefit, even if the Plan has one: a Member can't use it.</li>
  * <li>The Benefit status is {@code COVERED} when the Plan pays for the procedure, {@code NOT_COVERED} when the
  * Plan has a Benefit saying it doesn't, and {@code NO_BENEFIT_ON_FILE} when the Plan has no Benefit for it. No
@@ -26,6 +29,9 @@ import org.jspecify.annotations.Nullable;
  */
 public final class EligibilityRules {
 
+	/** No Accumulator for the plan year means nothing has been met yet. */
+	private static final PlanYearAccumulator NOTHING_MET = new PlanYearAccumulator(BigDecimal.ZERO, BigDecimal.ZERO);
+
 	private EligibilityRules() {
 	}
 
@@ -34,16 +40,33 @@ public final class EligibilityRules {
 	 * @param coverage the Member's Coverage active on the Service date, or {@code null} when they have none
 	 * @param benefit the Plan's Benefit for the procedure, or {@code null} when the Plan has no benefit on file for
 	 * it
+	 * @param accumulator the active Coverage's totals for the plan year containing the Service date, or {@code null}
+	 * when none are recorded
 	 */
 	public static EligibilityResult check(LocalDate serviceDate, @Nullable ActiveCoverage coverage,
-			@Nullable PlanBenefit benefit) {
+			@Nullable PlanBenefit benefit, @Nullable PlanYearAccumulator accumulator) {
 		if (coverage == null) {
-			return new EligibilityResult(new CoverageResult(false, null, null, null, null), null);
+			return new EligibilityResult(new CoverageResult(false, null, null, null, null, null, null), null);
 		}
+		var met = (accumulator == null) ? NOTHING_MET : accumulator;
 		return new EligibilityResult(
 				new CoverageResult(true, coverage.planId(), coverage.planName(), coverage.planType(),
-						serviceDate.getYear()),
+						planYearOf(serviceDate), remaining(coverage.deductible(), met.deductibleMet()),
+						remaining(coverage.outOfPocketMaximum(), met.outOfPocketMet())),
 				benefitResult(benefit));
+	}
+
+	/**
+	 * The plan year an answer comes from: the calendar year of the Service date. The caller uses it to find the
+	 * Accumulator to pass to {@link #check}.
+	 */
+	public static int planYearOf(LocalDate serviceDate) {
+		return serviceDate.getYear();
+	}
+
+	/** Never below zero: recorded totals can exceed the Plan's limit, and negative money would mislead. */
+	private static BigDecimal remaining(BigDecimal limit, BigDecimal met) {
+		return dollars(limit.subtract(met).max(BigDecimal.ZERO));
 	}
 
 	private static BenefitResult benefitResult(@Nullable PlanBenefit benefit) {
@@ -53,18 +76,28 @@ public final class EligibilityRules {
 		if (!benefit.covered()) {
 			return new BenefitResult(BenefitStatus.NOT_COVERED, null, null, null, null);
 		}
+		var copay = benefit.copay();
 		return new BenefitResult(BenefitStatus.COVERED, benefit.priorAuthRequired(), benefit.deductibleApplies(),
-				dollars(benefit.copay()), benefit.coinsurancePercent());
+				(copay == null) ? null : dollars(copay), benefit.coinsurancePercent());
 	}
 
-	private static @Nullable BigDecimal dollars(@Nullable BigDecimal amount) {
-		return (amount == null) ? null : amount.setScale(2, RoundingMode.HALF_UP);
+	private static BigDecimal dollars(BigDecimal amount) {
+		return amount.setScale(2, RoundingMode.HALF_UP);
 	}
 
 	/**
-	 * The Member's Coverage active on the Service date, described by its Plan.
+	 * The Member's Coverage active on the Service date, described by its Plan, with the Plan's deductible and
+	 * out-of-pocket maximum in dollars.
 	 */
-	public record ActiveCoverage(String planId, String planName, PlanType planType) {
+	public record ActiveCoverage(String planId, String planName, PlanType planType, BigDecimal deductible,
+			BigDecimal outOfPocketMaximum) {
+	}
+
+	/**
+	 * The active Coverage's totals for the plan year containing the Service date, in dollars. Either can exceed the
+	 * Plan's limit.
+	 */
+	public record PlanYearAccumulator(BigDecimal deductibleMet, BigDecimal outOfPocketMet) {
 	}
 
 	/**
@@ -82,10 +115,12 @@ public final class EligibilityRules {
 
 	/**
 	 * Whether coverage is active on the Service date and, when it is, which Plan and plan year the answer comes
-	 * from. Everything but {@code active} is null when coverage isn't active.
+	 * from and what remains of the Plan's deductible and out-of-pocket maximum that plan year, in dollars with two
+	 * decimals. Everything but {@code active} is null when coverage isn't active.
 	 */
 	public record CoverageResult(boolean active, @Nullable String planId, @Nullable String planName,
-			@Nullable PlanType planType, @Nullable Integer planYear) {
+			@Nullable PlanType planType, @Nullable Integer planYear, @Nullable BigDecimal deductibleRemaining,
+			@Nullable BigDecimal outOfPocketRemaining) {
 	}
 
 	/**

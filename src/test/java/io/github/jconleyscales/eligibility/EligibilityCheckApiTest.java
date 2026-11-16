@@ -37,7 +37,9 @@ class EligibilityCheckApiTest {
 				    "planId": "PPO-LOW-DED",
 				    "planName": "Synthetic Low-Deductible PPO",
 				    "planType": "PPO",
-				    "planYear": 2026
+				    "planYear": 2026,
+				    "deductibleRemaining": 312.50,
+				    "outOfPocketRemaining": 2587.25
 				  },
 				  "benefit": {
 				    "status": "COVERED",
@@ -127,7 +129,9 @@ class EligibilityCheckApiTest {
 				    "planId": null,
 				    "planName": null,
 				    "planType": null,
-				    "planYear": null
+				    "planYear": null,
+				    "deductibleRemaining": null,
+				    "outOfPocketRemaining": null
 				  },
 				  "benefit": null
 				}

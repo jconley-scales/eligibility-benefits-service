@@ -30,19 +30,32 @@ record EligibilityCheckResponse(@Schema(description = "Echoed from the request."
 	}
 
 	/**
-	 * Whether coverage is active and, when it is, which Plan and plan year the answer comes from.
+	 * Whether coverage is active and, when it is, which Plan and plan year the answer comes from and what remains
+	 * of the Plan's deductible and out-of-pocket maximum.
 	 */
 	@Schema(description = """
 			Whether the Member has a Coverage active on the Service date and, when they do, which Plan and plan year \
-			the answer comes from. Every field but active is null when coverage isn't active.""")
+			the answer comes from and what remains of the Plan's deductible and out-of-pocket maximum. Every field \
+			but active is null when coverage isn't active.""")
 	record EligibilityCoverage(
 			@Schema(description = "Whether the Member has a Coverage active on the Service date.") boolean active,
 			@Nullable String planId, @Nullable String planName, @Nullable PlanType planType,
-			@Schema(description = "The calendar year of the Service date.") @Nullable Integer planYear) {
+			@Schema(description = "The calendar year of the Service date.") @Nullable Integer planYear,
+			@Schema(description = """
+					What remains of the Plan's deductible for this Coverage in the plan year, in dollars with two \
+					decimals: the deductible minus what the Member has met, never below zero. With nothing recorded \
+					for the plan year, the full deductible remains. A plan switch starts new totals at zero.""",
+					minimum = "0") @Nullable BigDecimal deductibleRemaining,
+			@Schema(description = """
+					What remains of the Plan's out-of-pocket maximum for this Coverage in the plan year, in dollars \
+					with two decimals: the maximum minus what the Member has paid, never below zero. With nothing \
+					recorded for the plan year, the full maximum remains. A plan switch starts new totals at \
+					zero.""", minimum = "0") @Nullable BigDecimal outOfPocketRemaining) {
 
 		static EligibilityCoverage of(CoverageResult coverage) {
 			return new EligibilityCoverage(coverage.active(), coverage.planId(), coverage.planName(),
-					coverage.planType(), coverage.planYear());
+					coverage.planType(), coverage.planYear(), coverage.deductibleRemaining(),
+					coverage.outOfPocketRemaining());
 		}
 
 	}
