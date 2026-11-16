@@ -20,6 +20,17 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+# springdoc serves the OpenAPI document at /v3/api-docs. The committed copy, docs/api/openapi.json,
+# must match it: ApiContractTest fails the build when the two differ.
+springdoc:
+  default-produces-media-type: application/json
+  # Pretty-printed so a regenerated contract file has a readable diff.
+  writer-with-default-pretty-printer: true
+  model-converters:
+    # Fields marked @Nullable, such as an ongoing Coverage's end date, are documented as nullable.
+    java-nullable-property-customizer:
+      enabled: true
+
 management:
   endpoints:
     web:

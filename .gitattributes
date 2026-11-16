@@ -2,3 +2,5 @@
 /mvnw text eol=lf
 *.sh text eol=lf
 *.cmd text eol=crlf
+# Regenerating the API contract writes LF on every OS; keep the checkout the same.
+/docs/api/openapi.json text eol=lf

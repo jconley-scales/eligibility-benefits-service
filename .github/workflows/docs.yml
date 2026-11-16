@@ -1,0 +1,39 @@
+name: Docs
+
+# Publishes docs/api, the Redoc page and the committed API contract, to GitHub Pages
+# whenever it changes on main. CI's verify keeps the contract in step with the code.
+# Pages must be set to deploy from GitHub Actions in the repo settings.
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/api/**
+      - .github/workflows/docs.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and never cancel one halfway through.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/api
+      - id: deployment
+        uses: actions/deploy-pages@v5

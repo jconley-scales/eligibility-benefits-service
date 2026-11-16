@@ -26,6 +26,7 @@
 	</scm>
 	<properties>
 		<java.version>25</java.version>
+		<springdoc-openapi.version>3.2.0</springdoc-openapi.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -47,6 +48,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+			<version>${springdoc-openapi.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.flywaydb</groupId>

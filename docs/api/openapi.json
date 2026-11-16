@@ -1,0 +1,132 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Eligibility & Benefits API",
+    "description" : "Answers an Eligibility check for one Member, one Procedure, and one Service date: is the Member's coverage active, what is their Plan's Benefit for the procedure, does it need prior authorization, and what is their cost share. Every Member and Plan is synthetic. The service runs locally and has no authentication.",
+    "license" : {
+      "name" : "MIT",
+      "url" : "https://github.com/jconley-scales/eligibility-benefits-service/blob/main/LICENSE"
+    },
+    "version" : "v1"
+  },
+  "externalDocs" : {
+    "description" : "Source, glossary, and design decisions",
+    "url" : "https://github.com/jconley-scales/eligibility-benefits-service"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8080",
+    "description" : "Local: docker compose up"
+  } ],
+  "paths" : {
+    "/v1/members/{memberId}/coverage" : {
+      "get" : {
+        "tags" : [ "Members" ],
+        "summary" : "List a Member's coverage history",
+        "description" : "The Member's Coverages, each with its Plan, ordered by start date.",
+        "operationId" : "getMemberCoverage",
+        "parameters" : [ {
+          "name" : "memberId",
+          "in" : "path",
+          "description" : "The Member's ID.",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "SYN-0007"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The Member's coverage history.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MemberCoverageResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No Member has this ID.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ProblemDetails" : {
+        "type" : "object",
+        "description" : "An error, in the RFC 9457 Problem Details format.",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "format" : "uri-reference",
+            "description" : "Identifies the problem type. Left out when it is about:blank, meaning the HTTP status says it all."
+          },
+          "title" : {
+            "type" : "string",
+            "description" : "A short summary of the problem type, such as \"Not Found\"."
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "The HTTP status code."
+          },
+          "detail" : {
+            "type" : "string",
+            "description" : "What went wrong with this request."
+          },
+          "instance" : {
+            "type" : "string",
+            "format" : "uri-reference",
+            "description" : "The path of the request that failed."
+          }
+        }
+      },
+      "CoverageSummary" : {
+        "type" : "object",
+        "properties" : {
+          "planId" : {
+            "type" : "string"
+          },
+          "planName" : {
+            "type" : "string"
+          },
+          "planType" : {
+            "type" : "string",
+            "enum" : [ "HMO", "PPO" ]
+          },
+          "startDate" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "endDate" : {
+            "type" : [ "string", "null" ],
+            "format" : "date"
+          }
+        }
+      },
+      "MemberCoverageResponse" : {
+        "type" : "object",
+        "properties" : {
+          "memberId" : {
+            "type" : "string"
+          },
+          "coverages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CoverageSummary"
+            }
+          }
+        }
+      }
+    }
+  }
+}
