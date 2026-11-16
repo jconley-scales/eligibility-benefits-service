@@ -9,7 +9,7 @@ So the Eligibility check has three Benefit statuses, and the two negative ones a
 
 `NO_BENEFIT_ON_FILE` comes back with 200, as an answer. A 404 is kept for a Member who doesn't exist, which is a data error. With no active coverage there is no Benefit at all, so neither status appears.
 
-The status is only safe if the procedure code was well formed: a typo would otherwise come back as no benefit on file. Request validation, added in a later ticket, rejects a malformed code with 400 for that reason. Until then, a malformed code is answered like any other code the Plan doesn't list.
+The status is only safe if the procedure code was well formed: a typo would otherwise come back as no benefit on file. Request validation rejects a malformed code with 400 for that reason. It checks only the format (CPT, CPT Category II or III, or HCPCS Level II), not the real code sets, so a well-formed code the Plan doesn't list is still no benefit on file.
 
 ## Considered options
 

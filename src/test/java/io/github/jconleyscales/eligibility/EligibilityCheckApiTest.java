@@ -173,8 +173,8 @@ class EligibilityCheckApiTest {
 	}
 
 	/**
-	 * Missing Benefits are an answer, not a failure. Only the format of a code is checked (in a later ticket), never
-	 * whether it is in the real CPT or HCPCS code sets.
+	 * Missing Benefits are an answer, not a failure. Only the format of a code is checked, never whether it is in the
+	 * real CPT or HCPCS code sets; {@link EligibilityCheckValidationApiTest} covers malformed codes.
 	 */
 	@ParameterizedTest(name = "{0}")
 	@ValueSource(strings = { "99213", "0042T", "J3490" })
