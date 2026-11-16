@@ -2,6 +2,20 @@
 
 A small Java REST service that answers an Eligibility check for one Member, one Procedure, and one Service date: is the Member's coverage active, what is their Plan's Benefit for the procedure, does it need prior authorization, and what is their cost share. Every Plan and Member is synthetic; there is no protected health information anywhere in this repo. Terms are defined in [`GLOSSARY.md`](GLOSSARY.md).
 
+## API
+
+The API reference is at **[jconley-scales.github.io/eligibility-benefits-service](https://jconley-scales.github.io/eligibility-benefits-service/)**, rendered by Redoc from the committed OpenAPI contract, [`docs/api/openapi.json`](docs/api/openapi.json). Build API clients against that file: the build fails whenever it differs from the API the code generates. A running service also serves the live document at `http://localhost:8080/v3/api-docs`.
+
+### Changing the API
+
+springdoc-openapi generates the contract from the code, and `ApiContractTest` fails when the committed file differs from it. After an intended API change, regenerate the file and commit it with the change:
+
+```sh
+./mvnw test -Dtest=ApiContractTest -DregenerateContract
+```
+
+The diff of `docs/api/openapi.json` is the API change as clients will see it, so review it before committing. Once the change is on `main`, the docs page republishes.
+
 ## Synthetic seed data
 
 `docker compose up` starts the service with these Plans, Members, and Coverages already loaded, so you can try any scenario right away. Each Member stands for one edge case:
