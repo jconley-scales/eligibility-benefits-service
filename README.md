@@ -23,6 +23,9 @@ The diff of `docs/api/openapi.json` is the API change as clients will see it, so
 ```sh
 curl http://localhost:8080/v1/members/SYN-0007/coverage
 curl http://localhost:8080/v1/plans/HMO-STANDARD/benefits
+curl -X POST http://localhost:8080/v1/eligibility/check \
+  -H 'Content-Type: application/json' \
+  -d '{"memberId": "SYN-0007", "procedureCode": "72148", "serviceDate": "2026-07-01"}'
 ```
 
 ### Members
@@ -68,4 +71,6 @@ Each Plan has a Benefit for each of the five pilot procedures the Prior Authoriz
 
 ## Design decisions
 
+- [ADR 0001](docs/adr/0001-plain-json-loosely-following-fhir.md): plain JSON loosely following FHIR, not full FHIR or X12 270/271, with the mapping to FHIR fields.
 - [ADR 0002](docs/adr/0002-postgres-with-database-enforced-coverage-rule.md): Postgres, with the one-coverage-at-a-time rule enforced by the database.
+- [ADR 0003](docs/adr/0003-no-benefit-on-file-is-not-a-denial.md): "no benefit on file" is not a denial.

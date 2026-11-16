@@ -1,12 +1,15 @@
 package io.github.jconleyscales.eligibility.web;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.servers.Server;
+import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -38,6 +41,41 @@ class OpenApiConfiguration {
 			.externalDocs(new ExternalDocumentation().description("Source, glossary, and design decisions")
 				.url("https://github.com/jconley-scales/eligibility-benefits-service"))
 			.servers(List.of(new Server().url(SERVER_URL).description("Local: docker compose up")));
+	}
+
+	/**
+	 * springdoc documents a {@code @Nullable} enum property as {@code "type": ["string", "null"]} but leaves null out
+	 * of its {@code enum}, and JSON Schema then rejects a null value. This adds null to the values of every nullable
+	 * enum property, such as an inactive coverage's {@code planType}.
+	 */
+	@Bean
+	OpenApiCustomizer nullableEnumsListNull() {
+		return openApi -> {
+			for (Schema<?> schema : openApi.getComponents().getSchemas().values()) {
+				if (schema.getProperties() != null) {
+					schema.getProperties()
+						.values()
+						.stream()
+						.filter(OpenApiConfiguration::isNullableEnumWithoutNull)
+						.forEach(OpenApiConfiguration::addNullToEnum);
+				}
+			}
+		};
+	}
+
+	private static boolean isNullableEnumWithoutNull(Schema<?> property) {
+		return property.getEnum() != null && property.getTypes() != null && property.getTypes().contains("null")
+				&& !property.getEnum().contains(null);
+	}
+
+	/**
+	 * Replaces the list rather than adding to it, because another property may share the same list.
+	 */
+	@SuppressWarnings("unchecked")
+	private static void addNullToEnum(Schema<?> property) {
+		var values = new ArrayList<Object>(property.getEnum());
+		values.add(null);
+		((Schema<Object>) property).setEnum(values);
 	}
 
 }

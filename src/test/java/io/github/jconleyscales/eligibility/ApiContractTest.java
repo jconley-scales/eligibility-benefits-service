@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.fail;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,21 @@ class ApiContractTest {
 	void serverUrlIsFixedSoTheContractIsTheSameOnEveryRun() {
 		apiDocs()
 			.expectBody().jsonPath("$.servers[*].url").isEqualTo(List.of("http://localhost:8080"));
+	}
+
+	/**
+	 * Under JSON Schema an {@code enum} lists every allowed value, so a nullable enum must list null too. Otherwise a
+	 * response for coverage that isn't active, whose {@code planType} is null, fails validation against the
+	 * contract.
+	 */
+	@Test
+	void aNullableEnumListsNullAmongItsValues() {
+		apiDocs()
+			.expectBody()
+			.jsonPath("$.components.schemas.EligibilityCoverage.properties.planType.enum")
+			.isEqualTo(Arrays.asList("HMO", "PPO", null))
+			.jsonPath("$.components.schemas.PlanBenefitsResponse.properties.planType.enum")
+			.isEqualTo(List.of("HMO", "PPO"));
 	}
 
 	/**
