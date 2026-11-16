@@ -1,0 +1,29 @@
+# `docker compose up` runs Postgres 18 and the service. Settings come from
+# environment variables (or a local .env file); the defaults are local-only
+# credentials for the synthetic database, not secrets.
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${DB_NAME:-eligibility}
+      POSTGRES_USER: ${DB_USERNAME:-eligibility}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-eligibility}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username=$${POSTGRES_USER} --dbname=$${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-eligibility}
+      DB_USERNAME: ${DB_USERNAME:-eligibility}
+      DB_PASSWORD: ${DB_PASSWORD:-eligibility}
+    ports:
+      - "8080:8080"
