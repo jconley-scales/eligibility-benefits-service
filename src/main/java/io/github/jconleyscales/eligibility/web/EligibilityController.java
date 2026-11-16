@@ -29,7 +29,8 @@ class EligibilityController {
 			description = """
 					One answer for one Member, one procedure, and one Service date, judged as of the Service date \
 					rather than today: whether coverage is active, which Plan and plan year the answer comes from, \
-					and the Plan's Benefit for the procedure.""")
+					what remains of the Plan's deductible and out-of-pocket maximum that plan year, and the Plan's \
+					Benefit for the procedure.""")
 	@ApiResponse(responseCode = "200", description = """
 			The answer. Coverage that isn't active, and a procedure with no benefit on file, are answers too, not \
 			errors.""")

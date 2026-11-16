@@ -2,6 +2,8 @@ package io.github.jconleyscales.eligibility.service;
 
 import java.time.LocalDate;
 
+import io.github.jconleyscales.eligibility.persistence.Accumulator;
+import io.github.jconleyscales.eligibility.persistence.AccumulatorRepository;
 import io.github.jconleyscales.eligibility.persistence.Benefit;
 import io.github.jconleyscales.eligibility.persistence.BenefitRepository;
 import io.github.jconleyscales.eligibility.persistence.Coverage;
@@ -11,6 +13,7 @@ import io.github.jconleyscales.eligibility.rules.EligibilityRules;
 import io.github.jconleyscales.eligibility.rules.EligibilityRules.ActiveCoverage;
 import io.github.jconleyscales.eligibility.rules.EligibilityRules.EligibilityResult;
 import io.github.jconleyscales.eligibility.rules.EligibilityRules.PlanBenefit;
+import io.github.jconleyscales.eligibility.rules.EligibilityRules.PlanYearAccumulator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,10 +30,14 @@ public class EligibilityService {
 
 	private final BenefitRepository benefits;
 
-	EligibilityService(MemberRepository members, CoverageRepository coverages, BenefitRepository benefits) {
+	private final AccumulatorRepository accumulators;
+
+	EligibilityService(MemberRepository members, CoverageRepository coverages, BenefitRepository benefits,
+			AccumulatorRepository accumulators) {
 		this.members = members;
 		this.coverages = coverages;
 		this.benefits = benefits;
+		this.accumulators = accumulators;
 	}
 
 	/**
@@ -44,23 +51,32 @@ public class EligibilityService {
 		}
 		var coverage = coverages.findActiveOn(memberId, serviceDate).orElse(null);
 		if (coverage == null) {
-			// With no Coverage there is no Plan whose Benefit could be loaded.
-			return EligibilityRules.check(serviceDate, null, null);
+			// With no Coverage there is no Plan whose Benefit, and no Coverage whose Accumulator, could be loaded.
+			return EligibilityRules.check(serviceDate, null, null, null);
 		}
 		var benefit = benefits.findByPlanIdAndProcedureCode(coverage.getPlan().getId(), procedureCode)
 			.map(EligibilityService::planBenefit)
 			.orElse(null);
-		return EligibilityRules.check(serviceDate, activeCoverage(coverage), benefit);
+		var accumulator = accumulators
+			.findByCoverageIdAndPlanYear(coverage.getId(), EligibilityRules.planYearOf(serviceDate))
+			.map(EligibilityService::planYearAccumulator)
+			.orElse(null);
+		return EligibilityRules.check(serviceDate, activeCoverage(coverage), benefit, accumulator);
 	}
 
 	private static ActiveCoverage activeCoverage(Coverage coverage) {
 		var plan = coverage.getPlan();
-		return new ActiveCoverage(plan.getId(), plan.getName(), plan.getPlanType());
+		return new ActiveCoverage(plan.getId(), plan.getName(), plan.getPlanType(), plan.getDeductible(),
+				plan.getOutOfPocketMaximum());
 	}
 
 	private static PlanBenefit planBenefit(Benefit benefit) {
 		return new PlanBenefit(benefit.isCovered(), benefit.getPriorAuthRequired(), benefit.getDeductibleApplies(),
 				benefit.getCopay(), benefit.getCoinsurancePercent());
+	}
+
+	private static PlanYearAccumulator planYearAccumulator(Accumulator accumulator) {
+		return new PlanYearAccumulator(accumulator.getDeductibleMet(), accumulator.getOutOfPocketMet());
 	}
 
 }

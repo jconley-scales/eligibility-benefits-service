@@ -22,7 +22,7 @@
       "post" : {
         "tags" : [ "Eligibility" ],
         "summary" : "Check eligibility",
-        "description" : "One answer for one Member, one procedure, and one Service date, judged as of the Service date rather than today: whether coverage is active, which Plan and plan year the answer comes from, and the Plan's Benefit for the procedure.",
+        "description" : "One answer for one Member, one procedure, and one Service date, judged as of the Service date rather than today: whether coverage is active, which Plan and plan year the answer comes from, what remains of the Plan's deductible and out-of-pocket maximum that plan year, and the Plan's Benefit for the procedure.",
         "operationId" : "checkEligibility",
         "requestBody" : {
           "content" : {
@@ -297,7 +297,7 @@
       },
       "EligibilityCoverage" : {
         "type" : "object",
-        "description" : "Whether the Member has a Coverage active on the Service date and, when they do, which Plan and plan year the answer comes from. Every field but active is null when coverage isn't active.",
+        "description" : "Whether the Member has a Coverage active on the Service date and, when they do, which Plan and plan year the answer comes from and what remains of the Plan's deductible and out-of-pocket maximum. Every field but active is null when coverage isn't active.",
         "properties" : {
           "active" : {
             "type" : "boolean",
@@ -317,6 +317,16 @@
             "type" : [ "integer", "null" ],
             "format" : "int32",
             "description" : "The calendar year of the Service date."
+          },
+          "deductibleRemaining" : {
+            "type" : [ "number", "null" ],
+            "description" : "What remains of the Plan's deductible for this Coverage in the plan year, in dollars with two decimals: the deductible minus what the Member has met, never below zero. With nothing recorded for the plan year, the full deductible remains. A plan switch starts new totals at zero.",
+            "minimum" : 0
+          },
+          "outOfPocketRemaining" : {
+            "type" : [ "number", "null" ],
+            "description" : "What remains of the Plan's out-of-pocket maximum for this Coverage in the plan year, in dollars with two decimals: the maximum minus what the Member has paid, never below zero. With nothing recorded for the plan year, the full maximum remains. A plan switch starts new totals at zero.",
+            "minimum" : 0
           }
         }
       },

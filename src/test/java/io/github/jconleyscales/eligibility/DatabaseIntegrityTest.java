@@ -151,6 +151,40 @@ class DatabaseIntegrityTest {
 			.hasMessageContaining("benefit_coinsurance_percent_0_to_100");
 	}
 
+	/** Totals belong to one Coverage and one plan year, so a lookup by both finds one Accumulator or none. */
+	@Test
+	void aSecondAccumulatorForTheSameCoverageAndPlanYearIsRejected() {
+		var coverageId = insertCoverage(LocalDate.of(2025, 1, 1), null);
+		insertAccumulator(coverageId, 2026, new BigDecimal("100.00"), new BigDecimal("200.00"));
+
+		assertThatThrownBy(() -> insertAccumulator(coverageId, 2026, BigDecimal.ZERO, BigDecimal.ZERO))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("accumulator_one_per_coverage_and_plan_year");
+	}
+
+	@Test
+	void aCoverageMayHaveAnAccumulatorForEachPlanYear() {
+		var coverageId = insertCoverage(LocalDate.of(2025, 1, 1), null);
+		insertAccumulator(coverageId, 2025, new BigDecimal("100.00"), new BigDecimal("200.00"));
+
+		assertThatCode(() -> insertAccumulator(coverageId, 2026, BigDecimal.ZERO, BigDecimal.ZERO))
+			.doesNotThrowAnyException();
+	}
+
+	@ParameterizedTest(name = "deductible met {0}, out-of-pocket met {1}")
+	@CsvSource(textBlock = """
+			-0.01, 0.00,  accumulator_deductible_met_not_negative
+			0.00,  -0.01, accumulator_out_of_pocket_met_not_negative
+			""")
+	void negativeAccumulatorTotalsAreRejected(BigDecimal deductibleMet, BigDecimal outOfPocketMet,
+			String constraint) {
+		var coverageId = insertCoverage(LocalDate.of(2026, 1, 1), null);
+
+		assertThatThrownBy(() -> insertAccumulator(coverageId, 2026, deductibleMet, outOfPocketMet))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining(constraint);
+	}
+
 	private void insertMember(String id, boolean synthetic) {
 		jdbc.update("""
 				INSERT INTO member (id, first_name, last_name, date_of_birth, synthetic)
@@ -165,13 +199,24 @@ class DatabaseIntegrityTest {
 				""", id);
 	}
 
-	private void insertCoverage(LocalDate startDate, @Nullable LocalDate endDate) {
-		insertCoverage(MEMBER_ID, startDate, endDate);
+	private Long insertCoverage(LocalDate startDate, @Nullable LocalDate endDate) {
+		return insertCoverage(MEMBER_ID, startDate, endDate);
 	}
 
-	private void insertCoverage(String memberId, LocalDate startDate, @Nullable LocalDate endDate) {
-		jdbc.update("INSERT INTO coverage (member_id, plan_id, start_date, end_date) VALUES (?, ?, ?, ?)",
-				memberId, PLAN_ID, startDate, endDate);
+	/** @return the new Coverage's generated ID */
+	private Long insertCoverage(String memberId, LocalDate startDate, @Nullable LocalDate endDate) {
+		return jdbc.queryForObject("""
+				INSERT INTO coverage (member_id, plan_id, start_date, end_date) VALUES (?, ?, ?, ?)
+				RETURNING id
+				""", Long.class, memberId, PLAN_ID, startDate, endDate);
+	}
+
+	private void insertAccumulator(Long coverageId, int planYear, BigDecimal deductibleMet,
+			BigDecimal outOfPocketMet) {
+		jdbc.update("""
+				INSERT INTO accumulator (coverage_id, plan_year, deductible_met, out_of_pocket_met)
+				VALUES (?, ?, ?, ?)
+				""", coverageId, planYear, deductibleMet, outOfPocketMet);
 	}
 
 	private void insertCoveredBenefit(String planId, String procedureCode) {

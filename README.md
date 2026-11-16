@@ -18,7 +18,7 @@ The diff of `docs/api/openapi.json` is the API change as clients will see it, so
 
 ## Synthetic seed data
 
-`docker compose up` starts the service with these Plans, Members, Coverages, and Benefits already loaded, so you can try any scenario right away. Each Member stands for one edge case:
+`docker compose up` starts the service with these Plans, Members, Coverages, Benefits, and Accumulators already loaded, so you can try any scenario right away. Each Member stands for one edge case:
 
 ```sh
 curl http://localhost:8080/v1/members/SYN-0007/coverage
@@ -41,11 +41,11 @@ The end date is the last covered day. An open end means the Coverage is ongoing.
 | `SYN-0005` | Coverage starting 2027-01-01                                                    | `HMO-STANDARD` from 2027-01-01, ongoing                                      |
 | `SYN-0006` | Coverage ending 2026-12-31                                                      | `PPO-LOW-DED` 2026-01-01 to 2026-12-31                                       |
 | `SYN-0007` | Plan switch mid-year                                                            | `PPO-HIGH-DED` 2026-01-01 to 2026-06-30, then `HMO-STANDARD` from 2026-07-01 |
-| `SYN-0008` | No Accumulator for the service year                                             | `PPO-LOW-DED` from 2025-01-01, ongoing                                       |
+| `SYN-0008` | No Accumulator for the plan year                                                | `PPO-LOW-DED` from 2025-01-01, ongoing                                       |
 | `SYN-0009` | Plan excludes the requested procedure: `95810` is not covered                   | `HMO-STANDARD` from 2026-01-01, ongoing                                      |
 | `SYN-0010` | Plan has no Benefit for the requested procedure: `97110` has no benefit on file | `PPO-HIGH-DED` from 2026-01-01, ongoing                                      |
 
-Benefits belong to the Plan, so any Member on `HMO-STANDARD` gets "not covered" for `95810`, and any Member on `PPO-HIGH-DED` gets "no benefit on file" for `97110`. `SYN-0009` and `SYN-0010` are the Members set aside for those two cases. The Accumulator edge cases (deductible and out-of-pocket totals, no Accumulator for the service year) take effect once that table is added. The Members and Coverages they attach to are already here.
+Benefits belong to the Plan, so any Member on `HMO-STANDARD` gets "not covered" for `95810`, and any Member on `PPO-HIGH-DED` gets "no benefit on file" for `97110`. `SYN-0009` and `SYN-0010` are the Members set aside for those two cases. The Accumulator edge cases are listed under [Accumulators](#accumulators).
 
 ### Plans
 
@@ -68,6 +68,22 @@ Each Plan has a Benefit for each of the five pilot procedures the Prior Authoriz
 | `E0601` CPAP device (HCPCS)   | 20%, deductible, prior auth | 10%, deductible, prior auth | 30%, deductible, prior auth |
 
 "Not covered" means the Plan has a Benefit saying it doesn't pay for the procedure. "No benefit on file" means the Plan has no Benefit for it at all: the answer is unknown, not unpaid, so a person decides.
+
+### Accumulators
+
+An Accumulator holds a Member's deductible and out-of-pocket totals for one Coverage in one plan year (the calendar year). For active coverage, the Eligibility check reports `deductibleRemaining` and `outOfPocketRemaining`: the Plan's deductible and out-of-pocket maximum minus what has been met, never below zero. With no Accumulator for the plan year nothing has been met yet, so the full amounts remain. Totals belong to one Coverage, so a plan switch starts the new Coverage at zero.
+
+| Member ID  | Edge case                                         | Coverage                              | Plan year | Deductible met | Out-of-pocket met | Deductible remaining | Out-of-pocket remaining |
+| ---------- | ------------------------------------------------- | ------------------------------------- | --------: | -------------: | ----------------: | -------------------: | ----------------------: |
+| `SYN-0001` | Part of the deductible met                        | `PPO-LOW-DED`                         |      2026 |        $187.50 |           $412.75 |              $312.50 |               $2,587.25 |
+| `SYN-0002` | Deductible fully met                              | `PPO-HIGH-DED`                        |      2026 |      $3,000.00 |         $3,600.00 |                $0.00 |               $3,400.00 |
+| `SYN-0003` | Out-of-pocket maximum met                         | `HMO-STANDARD`                        |      2026 |        $250.00 |         $4,000.00 |                $0.00 |                   $0.00 |
+| `SYN-0007` | Plan switch: totals on the first Coverage only    | `PPO-HIGH-DED` to 2026-06-30          |      2026 |      $1,200.00 |         $1,500.00 |            $1,800.00 |               $5,500.00 |
+| `SYN-0007` |                                                   | `HMO-STANDARD` from 2026-07-01        |      2026 |   none on file |      none on file |              $250.00 |               $4,000.00 |
+| `SYN-0008` | No Accumulator for the plan year                  | `PPO-LOW-DED`                         |      2025 |        $500.00 |         $1,250.00 |                $0.00 |               $1,750.00 |
+| `SYN-0008` |                                                   | `PPO-LOW-DED`                         |      2026 |   none on file |      none on file |              $500.00 |               $3,000.00 |
+
+No other Coverage has an Accumulator, so every other active Coverage has its Plan's full deductible and out-of-pocket maximum remaining.
 
 ## Design decisions
 

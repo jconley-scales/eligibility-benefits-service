@@ -18,8 +18,10 @@ We use neither in full. `POST /v1/eligibility/check` takes and returns plain JSO
 | `benefit.copay` | an `insurance.item.benefit` entry of type `copay`, with `allowedMoney` |
 | `benefit.coinsurancePercent` | an `insurance.item.benefit` entry of type `copay-percent`, with `allowedUnsignedInt` |
 | `benefit.deductibleApplies` | a `deductible` entry in `insurance.item.benefit`; FHIR has no flag for it |
+| `coverage.deductibleRemaining` | a `deductible` entry in `insurance.item.benefit`: `allowedMoney` minus `usedMoney` |
+| `coverage.outOfPocketRemaining` | an `insurance.item.benefit` entry for the out-of-pocket maximum: `allowedMoney` minus `usedMoney` |
 
-The deductible and out-of-pocket remaining, added in a later ticket, map to `benefit` entries as well. FHIR reports what is allowed and what is used, while this API reports what remains.
+FHIR reports what is allowed and what is used, while this API reports only what remains, never below zero. FHIR puts these entries on an `item`; this API puts them on `coverage` because they don't depend on the procedure.
 
 ## Considered options
 
