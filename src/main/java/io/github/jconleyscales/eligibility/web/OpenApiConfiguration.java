@@ -2,12 +2,15 @@ package io.github.jconleyscales.eligibility.web;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeMap;
 
 import io.swagger.v3.oas.models.ExternalDocumentation;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.servers.Server;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -61,6 +64,27 @@ class OpenApiConfiguration {
 				}
 			}
 		};
+	}
+
+	/**
+	 * springdoc lists the responses that {@link ApiExceptionHandler} documents for every operation, such as the 500,
+	 * ahead of the operation's own, and the docs page shows them in that order. This sorts each operation's
+	 * responses by status code, so 200 comes first.
+	 */
+	@Bean
+	OpenApiCustomizer responsesInStatusCodeOrder() {
+		return openApi -> openApi.getPaths()
+			.values()
+			.stream()
+			.flatMap(path -> path.readOperations().stream())
+			.map(Operation::getResponses)
+			.forEach(OpenApiConfiguration::sortByStatusCode);
+	}
+
+	private static void sortByStatusCode(ApiResponses responses) {
+		var sorted = new TreeMap<>(responses);
+		responses.clear();
+		responses.putAll(sorted);
 	}
 
 	private static boolean isNullableEnumWithoutNull(Schema<?> property) {

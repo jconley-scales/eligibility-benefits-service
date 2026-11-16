@@ -64,6 +64,16 @@
                 }
               }
             }
+          },
+          "500" : {
+            "description" : "An error the service didn't expect, such as the database being unreachable. The detail is the same for every such error and says nothing about the cause.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -97,6 +107,16 @@
           },
           "404" : {
             "description" : "No Plan has this ID.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "An error the service didn't expect, such as the database being unreachable. The detail is the same for every such error and says nothing about the cause.",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -144,6 +164,16 @@
                 }
               }
             }
+          },
+          "500" : {
+            "description" : "An error the service didn't expect, such as the database being unreachable. The detail is the same for every such error and says nothing about the cause.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -151,31 +181,6 @@
   },
   "components" : {
     "schemas" : {
-      "EligibilityCheckRequest" : {
-        "type" : "object",
-        "description" : "One Member, one procedure, and one Service date.",
-        "properties" : {
-          "memberId" : {
-            "type" : "string",
-            "description" : "The Member's ID.",
-            "example" : "SYN-0001",
-            "minLength" : 1
-          },
-          "procedureCode" : {
-            "type" : "string",
-            "description" : "The procedure's code, which must be a CPT code (five digits), a CPT Category II or III code (four digits then F, T, or U), or a HCPCS Level II code (an upper-case letter then four digits). Only the format is checked, not whether the code is in the CPT or HCPCS code sets.",
-            "example" : "29881",
-            "pattern" : "^([0-9]{5}|[0-9]{4}[FTU]|[A-Z][0-9]{4})$"
-          },
-          "serviceDate" : {
-            "type" : "string",
-            "format" : "date",
-            "description" : "The date the procedure is or was performed, as an ISO date. The answer is judged as of this date, past or future.",
-            "example" : "2026-03-15"
-          }
-        },
-        "required" : [ "memberId", "procedureCode", "serviceDate" ]
-      },
       "ProblemDetails" : {
         "type" : "object",
         "description" : "An error, in the RFC 9457 Problem Details format.",
@@ -204,6 +209,31 @@
             "description" : "The path of the request that failed."
           }
         }
+      },
+      "EligibilityCheckRequest" : {
+        "type" : "object",
+        "description" : "One Member, one procedure, and one Service date.",
+        "properties" : {
+          "memberId" : {
+            "type" : "string",
+            "description" : "The Member's ID.",
+            "example" : "SYN-0001",
+            "minLength" : 1
+          },
+          "procedureCode" : {
+            "type" : "string",
+            "description" : "The procedure's code, which must be a CPT code (five digits), a CPT Category II or III code (four digits then F, T, or U), or a HCPCS Level II code (an upper-case letter then four digits). Only the format is checked, not whether the code is in the CPT or HCPCS code sets.",
+            "example" : "29881",
+            "pattern" : "^([0-9]{5}|[0-9]{4}[FTU]|[A-Z][0-9]{4})$"
+          },
+          "serviceDate" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "The date the procedure is or was performed, as an ISO date. The answer is judged as of this date, past or future.",
+            "example" : "2026-03-15"
+          }
+        },
+        "required" : [ "memberId", "procedureCode", "serviceDate" ]
       },
       "EligibilityBenefit" : {
         "type" : "object",

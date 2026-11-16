@@ -5,10 +5,15 @@ import static java.util.stream.Collectors.joining;
 import java.time.LocalDate;
 
 import io.github.jconleyscales.eligibility.service.NotFoundException;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -22,15 +27,36 @@ import tools.jackson.databind.exc.MismatchedInputException;
 
 /**
  * Renders the API's errors as RFC 9457 Problem Details. The base class covers Spring MVC's own errors, such as an
- * unknown path; this adds the service's, such as an unknown Member or Plan, and replaces the base class's generic
- * detail for a bad request with one naming what the client must fix.
+ * unknown path; this adds the service's, such as an unknown Member or Plan, replaces the base class's generic
+ * detail for a bad request with one naming what the client must fix, and turns any error the service didn't expect
+ * into a 500 that names no cause.
  */
 @RestControllerAdvice
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
+	private static final String UNEXPECTED_ERROR_DETAIL =
+			"The service could not answer this request because of an unexpected error.";
+
 	@ExceptionHandler
 	ProblemDetail notFound(NotFoundException exception) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
+	}
+
+	/**
+	 * Any error no other handler names, such as the database being unreachable. The detail is the same every time,
+	 * because an exception's message or class can name internal hosts, tables, or code; the exception goes to the
+	 * log instead. Spring MVC's own errors still reach the base class, whose handler names their types and so
+	 * matches them more closely than {@link Exception} does.
+	 */
+	@ExceptionHandler
+	@ApiResponse(responseCode = "500", description = """
+			An error the service didn't expect, such as the database being unreachable. The detail is the same for \
+			every such error and says nothing about the cause.""",
+			content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+					schema = @Schema(implementation = ProblemDetailsSchema.class)))
+	ProblemDetail unexpectedError(Exception exception, HttpServletRequest request) {
+		logger.error("Unexpected error answering " + request.getMethod() + " " + request.getRequestURI(), exception);
+		return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, UNEXPECTED_ERROR_DETAIL);
 	}
 
 	/**
