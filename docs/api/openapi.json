@@ -18,6 +18,46 @@
     "description" : "Local: docker compose up"
   } ],
   "paths" : {
+    "/v1/plans/{planId}/benefits" : {
+      "get" : {
+        "tags" : [ "Plans" ],
+        "summary" : "List a Plan's Benefits",
+        "description" : "The Plan's details and its Benefits, ordered by procedure code: which procedures the Plan pays for, and on what terms.",
+        "operationId" : "getPlanBenefits",
+        "parameters" : [ {
+          "name" : "planId",
+          "in" : "path",
+          "description" : "The Plan's ID.",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "HMO-STANDARD"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The Plan and its Benefits.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanBenefitsResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No Plan has this ID.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/members/{memberId}/coverage" : {
       "get" : {
         "tags" : [ "Members" ],
@@ -87,6 +127,69 @@
             "type" : "string",
             "format" : "uri-reference",
             "description" : "The path of the request that failed."
+          }
+        }
+      },
+      "BenefitSummary" : {
+        "type" : "object",
+        "description" : "A Plan's Benefit for one procedure. When covered is false the Plan excludes the procedure, and the terms (priorAuthRequired, deductibleApplies, copay, coinsurancePercent) are null.",
+        "properties" : {
+          "procedureCode" : {
+            "type" : "string",
+            "description" : "A CPT or HCPCS code."
+          },
+          "covered" : {
+            "type" : "boolean",
+            "description" : "Whether the Plan pays for the procedure."
+          },
+          "priorAuthRequired" : {
+            "type" : [ "boolean", "null" ],
+            "description" : "Whether prior authorization is required before the procedure."
+          },
+          "deductibleApplies" : {
+            "type" : [ "boolean", "null" ],
+            "description" : "Whether the deductible applies to the procedure."
+          },
+          "copay" : {
+            "type" : [ "number", "null" ],
+            "description" : "The copay in dollars, with two decimals."
+          },
+          "coinsurancePercent" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32",
+            "description" : "The coinsurance, as a whole-number percentage.",
+            "maximum" : 100,
+            "minimum" : 0
+          }
+        }
+      },
+      "PlanBenefitsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "planId" : {
+            "type" : "string"
+          },
+          "planName" : {
+            "type" : "string"
+          },
+          "planType" : {
+            "type" : "string",
+            "enum" : [ "HMO", "PPO" ]
+          },
+          "deductible" : {
+            "type" : "number",
+            "description" : "In dollars, with two decimals."
+          },
+          "outOfPocketMaximum" : {
+            "type" : "number",
+            "description" : "In dollars, with two decimals."
+          },
+          "benefits" : {
+            "type" : "array",
+            "description" : "One Benefit per procedure code. A procedure that isn't listed has no benefit on file under this Plan, which means unknown, not unpaid.",
+            "items" : {
+              "$ref" : "#/components/schemas/BenefitSummary"
+            }
           }
         }
       },

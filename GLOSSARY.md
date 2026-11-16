@@ -25,7 +25,7 @@ A medical service identified by a CPT or HCPCS code.
 _Avoid_: Service, treatment
 
 **Benefit**:
-A plan's rule for one procedure: whether the plan pays for it, whether it needs prior authorization, whether the deductible applies to it, and the member's cost share for it.
+A plan's rule for one procedure: whether the plan pays for it and, when it does, on what terms: whether it needs prior authorization, whether the deductible applies to it, and the member's cost share for it. A Benefit for a procedure the plan doesn't pay for (not covered) has no terms.
 _Avoid_: Coverage, "covered" on its own
 
 **No benefit on file**:
