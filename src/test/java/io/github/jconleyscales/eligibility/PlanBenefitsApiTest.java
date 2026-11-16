@@ -1,9 +1,9 @@
 package io.github.jconleyscales.eligibility;
 
+import static io.github.jconleyscales.eligibility.RawJson.valuesOf;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -129,17 +129,6 @@ class PlanBenefitsApiTest {
 
 	private ResponseSpec benefitsOf(String planId) {
 		return client.get().uri("/v1/plans/{planId}/benefits", planId).exchange();
-	}
-
-	/**
-	 * Every value of a JSON member with this name, exactly as the response spells it.
-	 */
-	private static List<String> valuesOf(String json, String name) {
-		return Pattern.compile("\"" + name + "\"\\s*:\\s*([^,}\\s]+)")
-			.matcher(json)
-			.results()
-			.map(match -> match.group(1))
-			.toList();
 	}
 
 }

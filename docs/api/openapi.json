@@ -18,6 +18,46 @@
     "description" : "Local: docker compose up"
   } ],
   "paths" : {
+    "/v1/eligibility/check" : {
+      "post" : {
+        "tags" : [ "Eligibility" ],
+        "summary" : "Check eligibility",
+        "description" : "One answer for one Member, one procedure, and one Service date, judged as of the Service date rather than today: whether coverage is active, which Plan and plan year the answer comes from, and the Plan's Benefit for the procedure.",
+        "operationId" : "checkEligibility",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EligibilityCheckRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "The answer. Coverage that isn't active, and a procedure with no benefit on file, are answers too, not errors.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EligibilityCheckResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No Member has this ID.",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/plans/{planId}/benefits" : {
       "get" : {
         "tags" : [ "Plans" ],
@@ -101,6 +141,28 @@
   },
   "components" : {
     "schemas" : {
+      "EligibilityCheckRequest" : {
+        "type" : "object",
+        "description" : "One Member, one procedure, and one Service date.",
+        "properties" : {
+          "memberId" : {
+            "type" : "string",
+            "description" : "The Member's ID.",
+            "example" : "SYN-0001"
+          },
+          "procedureCode" : {
+            "type" : "string",
+            "description" : "A CPT or HCPCS code.",
+            "example" : "29881"
+          },
+          "serviceDate" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "The date the procedure is or was performed, as an ISO date. The answer is judged as of this date, past or future.",
+            "example" : "2026-03-15"
+          }
+        }
+      },
       "ProblemDetails" : {
         "type" : "object",
         "description" : "An error, in the RFC 9457 Problem Details format.",
@@ -127,6 +189,91 @@
             "type" : "string",
             "format" : "uri-reference",
             "description" : "The path of the request that failed."
+          }
+        }
+      },
+      "EligibilityBenefit" : {
+        "type" : "object",
+        "description" : "The Plan's Benefit for the procedure. The terms (priorAuthRequired, deductibleApplies, copay, coinsurancePercent) are set when status is COVERED and null otherwise.",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "description" : "COVERED: the Plan pays for the procedure. NOT_COVERED: the Plan has a Benefit saying it doesn't. NO_BENEFIT_ON_FILE: the Plan has no Benefit for the procedure, which means unknown, not unpaid, so a person decides. It is not a denial.",
+            "enum" : [ "COVERED", "NOT_COVERED", "NO_BENEFIT_ON_FILE" ]
+          },
+          "priorAuthRequired" : {
+            "type" : [ "boolean", "null" ],
+            "description" : "Whether prior authorization is required before the procedure."
+          },
+          "deductibleApplies" : {
+            "type" : [ "boolean", "null" ],
+            "description" : "Whether the deductible applies to the procedure."
+          },
+          "copay" : {
+            "type" : [ "number", "null" ],
+            "description" : "The copay in dollars, with two decimals."
+          },
+          "coinsurancePercent" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32",
+            "description" : "The coinsurance, as a whole-number percentage.",
+            "maximum" : 100,
+            "minimum" : 0
+          }
+        }
+      },
+      "EligibilityCheckResponse" : {
+        "type" : "object",
+        "description" : "The answer to an Eligibility check, judged as of the Service date.",
+        "properties" : {
+          "memberId" : {
+            "type" : "string",
+            "description" : "Echoed from the request."
+          },
+          "procedureCode" : {
+            "type" : "string",
+            "description" : "Echoed from the request."
+          },
+          "serviceDate" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Echoed from the request."
+          },
+          "coverage" : {
+            "$ref" : "#/components/schemas/EligibilityCoverage"
+          },
+          "benefit" : {
+            "description" : "The Plan's Benefit for the procedure. Null when coverage isn't active, so a Benefit the Member can't use is never returned.",
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/EligibilityBenefit"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        }
+      },
+      "EligibilityCoverage" : {
+        "type" : "object",
+        "description" : "Whether the Member has a Coverage active on the Service date and, when they do, which Plan and plan year the answer comes from. Every field but active is null when coverage isn't active.",
+        "properties" : {
+          "active" : {
+            "type" : "boolean",
+            "description" : "Whether the Member has a Coverage active on the Service date."
+          },
+          "planId" : {
+            "type" : [ "string", "null" ]
+          },
+          "planName" : {
+            "type" : [ "string", "null" ]
+          },
+          "planType" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "HMO", "PPO", null ]
+          },
+          "planYear" : {
+            "type" : [ "integer", "null" ],
+            "format" : "int32",
+            "description" : "The calendar year of the Service date."
           }
         }
       },
