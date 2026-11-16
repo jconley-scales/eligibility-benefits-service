@@ -1,5 +1,6 @@
 package io.github.jconleyscales.eligibility;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.json.JsonComparison;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.test.web.servlet.client.RestTestClient.ResponseSpec;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The API contract: the OpenAPI document springdoc generates from the code must match the committed contract
@@ -58,6 +60,25 @@ class ApiContractTest {
 			.isEqualTo(Arrays.asList("HMO", "PPO", null))
 			.jsonPath("$.components.schemas.PlanBenefitsResponse.properties.planType.enum")
 			.isEqualTo(List.of("HMO", "PPO"));
+	}
+
+	/**
+	 * Every operation documents the 500 that any unexpected error gets. springdoc lists it ahead of the operation's
+	 * own responses, and the docs page shows them in the order the contract gives, so they are sorted. The contract
+	 * comparison below ignores the order of object keys and so can't catch this.
+	 */
+	@Test
+	void everyOperationListsItsResponsesInStatusCodeOrderIncludingTheServerError() {
+		var operations = new JsonMapper().readTree(generatedContract())
+			.path("paths")
+			.values()
+			.stream()
+			.flatMap(path -> path.values().stream())
+			.toList();
+		assertThat(operations).isNotEmpty().allSatisfy(operation -> {
+			var statusCodes = List.copyOf(operation.path("responses").propertyNames());
+			assertThat(statusCodes).contains("200", "500").isSorted();
+		});
 	}
 
 	/**
